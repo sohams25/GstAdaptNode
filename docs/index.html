@@ -1,86 +1,125 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GstAdaptNode — Zero-Copy ROS 2 Acceleration</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #0a0f1a; }
-    .glow-cyan { text-shadow: 0 0 30px rgba(34,211,238,0.3), 0 0 60px rgba(34,211,238,0.1); }
-    .glow-border { box-shadow: 0 0 40px rgba(34,211,238,0.06); }
-    .gradient-border { border-image: linear-gradient(135deg, #22d3ee, #8b5cf6) 1; }
-    code { font-size: 0.88em; }
-    pre code { font-size: 0.8em; line-height: 1.6; }
-    .stat-glow { text-shadow: 0 0 16px currentColor; }
+    :root { --bg: #0a0e1a; --card: #111827; }
+    body { background: var(--bg); }
+    .glow { text-shadow: 0 0 40px rgba(34,211,238,0.25), 0 0 80px rgba(34,211,238,0.08); }
+    .card-hover { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(34,211,238,0.07); }
+    .toggle-active { background: linear-gradient(135deg, #06b6d4, #8b5cf6); }
+    .toggle-inactive { background: #1e293b; }
+    .code-fade-enter { opacity: 0; transform: translateY(8px); }
+    .code-fade { transition: opacity 0.3s ease, transform 0.3s ease; opacity: 1; transform: translateY(0); }
+    pre { tab-size: 4; }
   </style>
 </head>
 <body class="text-slate-200 font-sans antialiased">
 
   <!-- Nav -->
-  <nav class="fixed top-0 w-full z-50 bg-[#0a0f1a]/80 backdrop-blur-md border-b border-slate-800/50">
-    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-      <span class="font-bold text-cyan-400 text-lg tracking-tight">GstAdaptNode</span>
-      <div class="flex gap-6 text-sm text-slate-400">
-        <a href="#plug-and-play" class="hover:text-cyan-300 transition">Plug-and-Play</a>
-        <a href="#demo" class="hover:text-cyan-300 transition">Demo</a>
-        <a href="#benchmarks" class="hover:text-cyan-300 transition">Benchmarks</a>
-        <a href="https://github.com/sohams25/GstAdaptNode" class="hover:text-cyan-300 transition">GitHub</a>
+  <nav class="fixed top-0 w-full z-50 bg-[#0a0e1a]/85 backdrop-blur-lg border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
+      <a href="#" class="font-black text-cyan-400 text-lg tracking-tight">GstAdaptNode</a>
+      <div class="hidden md:flex gap-7 text-sm text-slate-500">
+        <a href="#features" class="hover:text-cyan-400 transition">Features</a>
+        <a href="#plug-and-play" class="hover:text-cyan-400 transition">Plug-and-Play</a>
+        <a href="#demo" class="hover:text-cyan-400 transition">Demo</a>
+        <a href="#benchmarks" class="hover:text-cyan-400 transition">Benchmarks</a>
+        <a href="https://github.com/sohams25/GstAdaptNode" class="text-slate-400 hover:text-white transition font-medium">GitHub</a>
       </div>
     </div>
   </nav>
 
   <!-- Hero -->
-  <section class="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-32 pb-20">
-    <div class="max-w-4xl">
-      <div class="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-5 py-2 text-xs text-cyan-400 mb-10 tracking-wide">
+  <section class="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-28 pb-24 relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-b from-cyan-500/[0.03] via-transparent to-transparent pointer-events-none"></div>
+    <div class="max-w-4xl relative">
+      <div class="inline-flex items-center gap-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-5 py-2 text-xs text-cyan-400 mb-12 tracking-wider font-medium">
         <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-        ROS 2 Humble &middot; C++17 &middot; Apache-2.0 &middot; Accepts native bgr8
+        ROS 2 Humble &middot; Native bgr8 &middot; Apache-2.0
       </div>
-      <h1 class="text-5xl md:text-7xl font-black tracking-tight leading-[1.05]">
-        <span class="text-white">Zero-Copy ROS 2</span><br/>
-        <span class="text-cyan-400 glow-cyan">Acceleration.</span>
+      <h1 class="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight leading-[0.95]">
+        <span class="text-white">Hardware-Agnostic</span><br/>
+        <span class="text-cyan-400 glow">ROS 2 Acceleration.</span>
       </h1>
-      <p class="mt-6 text-2xl md:text-3xl text-slate-500 font-light">
-        Pure Plug-and-Play.
+      <p class="mt-8 text-xl md:text-2xl text-slate-500 font-light max-w-2xl mx-auto leading-relaxed">
+        The zero-copy, drop-in replacement for <code class="text-cyan-300/80 bg-white/5 px-2 py-0.5 rounded">image_proc</code>.<br/>
+        Free your CPU.
       </p>
-      <p class="mt-8 text-base md:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-        Auto-detects Intel VA-API and NVIDIA NVMM at runtime.
-        Constructs zero-copy GStreamer pipelines from standard ROS parameters.
-        Accepts <code class="text-cyan-300 bg-slate-800 px-1.5 py-0.5 rounded">bgr8</code> natively
-        from any camera driver &mdash; no upstream changes required.
-      </p>
-      <div class="mt-12 flex gap-4 justify-center flex-wrap">
+      <div class="mt-14 flex gap-5 justify-center flex-wrap">
         <a href="https://github.com/sohams25/GstAdaptNode"
-           class="bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold px-8 py-3.5 rounded-xl transition shadow-lg shadow-cyan-500/25 text-sm uppercase tracking-wider">
+           class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-9 py-4 rounded-xl transition-all shadow-xl shadow-cyan-500/20 hover:shadow-cyan-400/30 text-sm uppercase tracking-widest">
           View on GitHub
         </a>
         <a href="#benchmarks"
-           class="border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 font-semibold px-8 py-3.5 rounded-xl transition text-sm uppercase tracking-wider">
-          See Benchmarks
+           class="border border-white/10 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 font-semibold px-9 py-4 rounded-xl transition-all text-sm uppercase tracking-widest">
+          See Results
         </a>
       </div>
     </div>
   </section>
 
+  <!-- Features -->
+  <section id="features" class="max-w-6xl mx-auto px-6 py-24">
+    <h2 class="text-4xl md:text-5xl font-black text-center mb-16">Why GstAdaptNode?</h2>
+    <div class="grid md:grid-cols-3 gap-7">
+      <div class="bg-[#111827] rounded-2xl p-8 border border-white/5 card-hover">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+        </div>
+        <h3 class="text-xl font-bold mb-3">Hardware Auto-Detection</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Probes <code class="text-slate-300">/dev/</code> for NVIDIA Jetson or Intel VA-API at startup. Falls back to CPU automatically. No config files, no environment variables.</p>
+      </div>
+      <div class="bg-[#111827] rounded-2xl p-8 border border-white/5 card-hover">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <h3 class="text-xl font-bold mb-3">True Zero-Copy IPC</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Custom <code class="text-slate-300">appsrc</code> wrapper moves the ROS message pointer directly into GStreamer via <code class="text-slate-300">gst_buffer_new_wrapped_full</code>. Zero serialization, zero memcpy.</p>
+      </div>
+      <div class="bg-[#111827] rounded-2xl p-8 border border-white/5 card-hover">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 flex items-center justify-center mb-5">
+          <svg class="w-6 h-6 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+        </div>
+        <h3 class="text-xl font-bold mb-3">5.6x CPU Reduction</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Offloads 4K resize to VA-API/NVMM hardware. Drops from 152% CPU to 27% per stream. Freed cores for SLAM, perception, planning.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- Plug-and-Play -->
-  <section id="plug-and-play" class="max-w-5xl mx-auto px-6 py-20">
-    <div class="text-center mb-12">
-      <h2 class="text-4xl font-bold">The Plug-and-Play Promise</h2>
-      <p class="mt-4 text-slate-400 max-w-2xl mx-auto text-lg">
-        <code class="text-cyan-300">gst_adapt_node::ResizeNode</code> is a
-        <span class="text-white font-semibold">drop-in replacement</span> for
-        <code class="text-slate-300">image_proc::ResizeNode</code>.
-        Same parameters. Same composable node interface. Change two strings.
+  <section id="plug-and-play" class="max-w-5xl mx-auto px-6 py-24">
+    <div class="text-center mb-14">
+      <h2 class="text-4xl md:text-5xl font-black">The Plug-and-Play Promise</h2>
+      <p class="mt-5 text-slate-400 text-lg max-w-2xl mx-auto">
+        Same parameters. Same composable node interface. Your camera still publishes <code class="text-cyan-300/70">bgr8</code>. Toggle below to see the difference.
       </p>
     </div>
-    <div class="grid md:grid-cols-2 gap-6">
-      <div class="rounded-2xl border border-red-500/20 bg-gradient-to-b from-red-500/5 to-transparent overflow-hidden">
-        <div class="px-5 py-3 border-b border-red-500/15 flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
-          <span class="text-red-400 text-xs font-bold uppercase tracking-widest">Before &mdash; CPU-bound</span>
+
+    <!-- Toggle -->
+    <div class="flex justify-center mb-8">
+      <div class="inline-flex bg-slate-800 rounded-xl p-1 border border-white/5">
+        <button id="btn-standard" onclick="showCode('standard')" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all toggle-inactive text-slate-400">
+          Standard ROS 2
+        </button>
+        <button id="btn-gst" onclick="showCode('gst')" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all toggle-active text-white">
+          GstAdaptNode
+        </button>
+      </div>
+    </div>
+
+    <!-- Code panels -->
+    <div class="relative max-w-2xl mx-auto">
+      <div id="code-standard" class="hidden rounded-2xl border border-red-500/20 bg-gradient-to-b from-red-500/[0.03] to-[#111827] overflow-hidden">
+        <div class="px-5 py-3 border-b border-red-500/10 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500/50"></span>
+          <span class="text-red-400/80 text-xs font-bold uppercase tracking-widest">CPU-bound &mdash; image_proc</span>
         </div>
-        <pre class="p-5 text-slate-300 overflow-x-auto"><code>ComposableNode(
+        <pre class="p-6 text-slate-300 text-sm overflow-x-auto"><code>ComposableNode(
     package=<span class="text-red-400">'image_proc'</span>,
     plugin=<span class="text-red-400">'image_proc::ResizeNode'</span>,
     name='resize',
@@ -91,12 +130,12 @@
     }],
 )</code></pre>
       </div>
-      <div class="rounded-2xl border border-cyan-500/25 bg-gradient-to-b from-cyan-500/5 to-transparent overflow-hidden glow-border">
-        <div class="px-5 py-3 border-b border-cyan-500/15 flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
-          <span class="text-cyan-400 text-xs font-bold uppercase tracking-widest">After &mdash; Hardware-Accelerated</span>
+      <div id="code-gst" class="rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-cyan-500/[0.03] to-[#111827] overflow-hidden" style="box-shadow: 0 0 50px rgba(34,211,238,0.04);">
+        <div class="px-5 py-3 border-b border-cyan-500/10 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span class="text-cyan-400/80 text-xs font-bold uppercase tracking-widest">Hardware-Accelerated &mdash; GstAdaptNode</span>
         </div>
-        <pre class="p-5 text-slate-300 overflow-x-auto"><code>ComposableNode(
+        <pre class="p-6 text-slate-300 text-sm overflow-x-auto"><code>ComposableNode(
     package=<span class="text-cyan-400">'gst_adapt_node'</span>,
     plugin=<span class="text-cyan-400">'gst_adapt_node::ResizeNode'</span>,
     name='resize',
@@ -108,188 +147,143 @@
 )</code></pre>
       </div>
     </div>
-    <p class="text-center text-slate-500 text-sm mt-6">
-      Your camera still publishes <code class="text-slate-400">bgr8</code>. Your perception stack still receives <code class="text-slate-400">bgr8</code>. Everything in between runs on the GPU.
-    </p>
-  </section>
-
-  <!-- How It Works -->
-  <section class="max-w-5xl mx-auto px-6 py-20">
-    <h2 class="text-4xl font-bold text-center mb-14">How It Works</h2>
-    <div class="grid md:grid-cols-3 gap-8">
-      <div class="bg-slate-800/40 rounded-2xl p-7 border border-slate-700/50 hover:border-cyan-700/50 transition group">
-        <div class="text-cyan-400 text-4xl font-mono font-black mb-4 group-hover:scale-110 transition">01</div>
-        <h3 class="text-lg font-bold mb-3">Detect Hardware</h3>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          Probes <code class="text-slate-300">/dev/nvhost-*</code> for Jetson and
-          <code class="text-slate-300">/dev/dri/renderD*</code> for Intel.
-          No config files. No environment variables.
-        </p>
-      </div>
-      <div class="bg-slate-800/40 rounded-2xl p-7 border border-slate-700/50 hover:border-cyan-700/50 transition group">
-        <div class="text-cyan-400 text-4xl font-mono font-black mb-4 group-hover:scale-110 transition">02</div>
-        <h3 class="text-lg font-bold mb-3">Validate Plugins</h3>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          Queries the GStreamer registry for
-          <code class="text-slate-300">vaapipostproc</code> or
-          <code class="text-slate-300">nvvideoconvert</code>.
-          Falls back to CPU with a visible warning if missing.
-        </p>
-      </div>
-      <div class="bg-slate-800/40 rounded-2xl p-7 border border-slate-700/50 hover:border-cyan-700/50 transition group">
-        <div class="text-cyan-400 text-4xl font-mono font-black mb-4 group-hover:scale-110 transition">03</div>
-        <h3 class="text-lg font-bold mb-3">Accelerate</h3>
-        <p class="text-slate-400 text-sm leading-relaxed">
-          Builds a hardware-specific pipeline at runtime. Custom
-          <code class="text-slate-300">appsrc</code>/<code class="text-slate-300">appsink</code>
-          wrapper feeds BGR frames directly to the GPU &mdash; zero copies.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Architecture -->
-  <section class="max-w-4xl mx-auto px-6 py-20">
-    <h2 class="text-4xl font-bold text-center mb-6">Zero-Copy Data Path</h2>
-    <p class="text-slate-400 text-center mb-10 max-w-2xl mx-auto">
-      Native <code class="text-cyan-300">bgr8</code> ingestion. No format conversion required upstream.
-      The GPU handles color conversion + resize in a single pass.
-    </p>
-    <div class="bg-slate-800/30 rounded-2xl p-8 border border-slate-700/50 font-mono text-sm leading-loose overflow-x-auto">
-      <div class="text-center space-y-1">
-        <div><span class="text-cyan-400 font-bold">Camera / MediaStreamerNode</span> <span class="text-slate-500">(bgr8, unique_ptr)</span></div>
-        <div class="text-slate-600">&darr; intra-process pointer move &mdash; 0 copies</div>
-        <div><span class="text-cyan-400 font-bold">ResizeNode::on_image()</span></div>
-        <div class="text-slate-600">&darr; gst_buffer_new_wrapped_full &mdash; 0 copies</div>
-        <div class="text-yellow-400 font-bold py-2">
-          appsrc &rarr; videoconvert &rarr; vaapipostproc &rarr; vaapipostproc &rarr; videoconvert &rarr; appsink
-        </div>
-        <div class="text-slate-500 text-xs">&lsaquo; GPU resize via VA-API / NVMM hardware &rsaquo;</div>
-        <div class="text-slate-600">&darr; on_new_sample() publishes processed bgr8</div>
-        <div><span class="text-cyan-400 font-bold">output_topic</span> <span class="text-slate-500">(bgr8, 640&times;480)</span></div>
-      </div>
-    </div>
+    <p class="text-center text-slate-600 text-xs mt-6 tracking-wide uppercase">Two strings change. Everything else stays the same.</p>
   </section>
 
   <!-- Visual Demo -->
-  <section id="demo" class="max-w-5xl mx-auto px-6 py-20">
-    <h2 class="text-4xl font-bold text-center mb-4">Glass-to-Glass Visual Comparison</h2>
-    <p class="text-slate-400 text-center mb-10 max-w-2xl mx-auto">
-      Split-screen output from <code>visualize_demo.py</code> showing live latency, FPS, and CPU overlays.
+  <section id="demo" class="max-w-5xl mx-auto px-6 py-24">
+    <h2 class="text-4xl md:text-5xl font-black text-center mb-5">Glass-to-Glass Visual Demo</h2>
+    <p class="text-slate-400 text-center mb-12 max-w-xl mx-auto">
+      Split-screen output from <code class="text-slate-300">visualize_demo.py</code> with live latency, FPS, and CPU overlays.
     </p>
-    <div class="rounded-2xl border-2 border-dashed border-slate-600 bg-slate-800/20 p-4 text-center">
-      <img src="assets/demo.gif" alt="Split-screen A/B comparison: Legacy CPU vs Accelerated VA-API with live metrics overlay"
-           class="w-full rounded-xl shadow-2xl border border-slate-700"
-           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-      <div class="hidden flex-col items-center justify-center py-20 text-slate-500">
-        <svg class="w-16 h-16 mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-        <p class="text-lg font-semibold">Demo Recording Placeholder</p>
-        <p class="text-sm mt-2 max-w-sm">
-          Record your <code class="text-slate-400">visualize_demo.py</code> output and save as
-          <code class="text-cyan-500">docs/assets/demo.gif</code>
-        </p>
+    <div class="rounded-2xl border border-cyan-500/10 bg-gradient-to-b from-cyan-500/[0.02] to-transparent p-1.5" style="box-shadow: 0 0 60px rgba(34,211,238,0.03);">
+      <div class="rounded-xl overflow-hidden bg-[#0a0e1a]">
+        <img src="assets/demo.gif" alt="Split-screen A/B comparison with live metrics"
+             class="w-full"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+        <div class="hidden flex-col items-center justify-center py-24 text-slate-600">
+          <svg class="w-20 h-20 mb-5 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          <p class="text-lg font-bold text-slate-500">Demo Recording</p>
+          <p class="text-sm mt-2 text-slate-600 max-w-xs text-center">
+            Place your screen recording at <code class="text-cyan-600">docs/assets/demo.gif</code>
+          </p>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- Benchmarks -->
-  <section id="benchmarks" class="max-w-5xl mx-auto px-6 py-20">
-    <h2 class="text-4xl font-bold text-center mb-4">Benchmark Results</h2>
-    <p class="text-slate-400 text-center mb-14 max-w-2xl mx-auto">
-      A/B comparison: <code>image_proc::ResizeNode</code> vs.
-      <code>gst_adapt_node::ResizeNode</code>.
-      4K BGR8 source &rarr; 640&times;480 at 30&nbsp;Hz. Intel VA-API desktop.
+  <section id="benchmarks" class="max-w-6xl mx-auto px-6 py-24">
+    <h2 class="text-4xl md:text-5xl font-black text-center mb-5">Benchmark Results</h2>
+    <p class="text-slate-400 text-center mb-16 max-w-2xl mx-auto">
+      <code>image_proc::ResizeNode</code> vs. <code>gst_adapt_node::ResizeNode</code>.
+      4K BGR8 input, 640&times;480 output, 30&nbsp;Hz. Intel VA-API.
     </p>
 
-    <!-- Stat Cards -->
-    <div class="grid md:grid-cols-3 gap-5 mb-12">
-      <div class="bg-gradient-to-br from-cyan-500/10 to-transparent rounded-2xl p-6 border border-cyan-500/15 text-center">
-        <div class="text-5xl font-black text-cyan-400 stat-glow">5.6x</div>
-        <div class="text-slate-400 text-sm mt-2 font-medium">CPU Reduction</div>
-        <div class="text-slate-600 text-xs mt-1">152% &rarr; 27%</div>
+    <!-- Stats -->
+    <div class="grid md:grid-cols-4 gap-5 mb-14">
+      <div class="bg-[#111827] rounded-2xl p-6 border border-white/5 text-center card-hover">
+        <div class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">5.6x</div>
+        <div class="text-slate-500 text-sm mt-2">CPU Reduction</div>
       </div>
-      <div class="bg-gradient-to-br from-cyan-500/10 to-transparent rounded-2xl p-6 border border-cyan-500/15 text-center">
-        <div class="text-5xl font-black text-cyan-400 stat-glow">&lt;15ms</div>
-        <div class="text-slate-400 text-sm mt-2 font-medium">Glass-to-Glass Latency</div>
-        <div class="text-slate-600 text-xs mt-1">5&ndash;15 ms accelerated</div>
+      <div class="bg-[#111827] rounded-2xl p-6 border border-white/5 text-center card-hover">
+        <div class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">&lt;15ms</div>
+        <div class="text-slate-500 text-sm mt-2">Latency</div>
       </div>
-      <div class="bg-gradient-to-br from-cyan-500/10 to-transparent rounded-2xl p-6 border border-cyan-500/15 text-center">
-        <div class="text-5xl font-black text-cyan-400 stat-glow">bgr8</div>
-        <div class="text-slate-400 text-sm mt-2 font-medium">Native Input</div>
-        <div class="text-slate-600 text-xs mt-1">No upstream changes</div>
+      <div class="bg-[#111827] rounded-2xl p-6 border border-white/5 text-center card-hover">
+        <div class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">bgr8</div>
+        <div class="text-slate-500 text-sm mt-2">Native Input</div>
+      </div>
+      <div class="bg-[#111827] rounded-2xl p-6 border border-white/5 text-center card-hover">
+        <div class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">0</div>
+        <div class="text-slate-500 text-sm mt-2">Memory Copies</div>
       </div>
     </div>
 
     <!-- Charts -->
-    <div class="grid md:grid-cols-2 gap-8">
-      <div class="bg-slate-800/30 rounded-2xl p-5 border border-slate-700/50">
-        <img src="assets/cpu_chart.svg" alt="CPU Utilization: Legacy 152% vs Accelerated 27%" class="w-full" />
+    <div class="grid md:grid-cols-2 gap-7">
+      <div class="bg-[#111827] rounded-2xl p-6 border border-white/5">
+        <img src="assets/cpu_chart.svg" alt="CPU Utilization Comparison" class="w-full"/>
       </div>
-      <div class="bg-slate-800/30 rounded-2xl p-5 border border-slate-700/50">
-        <img src="assets/latency_chart.svg" alt="Latency: Legacy 45ms vs Accelerated 15ms" class="w-full" />
+      <div class="bg-[#111827] rounded-2xl p-6 border border-white/5">
+        <img src="assets/latency_chart.svg" alt="Latency Comparison" class="w-full"/>
       </div>
     </div>
-    <p class="text-center text-slate-500 text-sm mt-6">
-      Measured with <code>cpu_monitor.py</code> and <code>latency_tracker.py</code>.
-      Freed CPU cores available for SLAM, perception, and planning.
-    </p>
   </section>
 
   <!-- Quick Start -->
-  <section class="max-w-3xl mx-auto px-6 py-20">
-    <h2 class="text-4xl font-bold text-center mb-10">Quick Start</h2>
-    <div class="bg-slate-800/50 rounded-2xl p-7 border border-slate-700/50 font-mono text-sm leading-relaxed overflow-x-auto">
-      <pre class="text-slate-300"><span class="text-slate-500"># Clone into a colcon workspace</span>
+  <section class="max-w-3xl mx-auto px-6 py-24">
+    <h2 class="text-4xl font-black text-center mb-12">Quick Start</h2>
+    <div class="bg-[#111827] rounded-2xl p-8 border border-white/5 font-mono text-sm leading-relaxed overflow-x-auto">
+      <pre class="text-slate-300"><span class="text-slate-600"># Clone</span>
 cd ~/ros2_ws/src
 git clone --recursive https://github.com/sohams25/GstAdaptNode.git gst_adapt_node
 
-<span class="text-slate-500"># Install dependencies</span>
+<span class="text-slate-600"># Dependencies</span>
 sudo apt install ros-humble-image-proc gstreamer1.0-vaapi \
   libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
-<span class="text-slate-500"># Build</span>
+<span class="text-slate-600"># Build</span>
 cd ~/ros2_ws &amp;&amp; colcon build --packages-up-to gst_adapt_node
 source install/setup.bash
 
-<span class="text-slate-500"># Run the A/B stress test</span>
+<span class="text-slate-600"># A/B stress test</span>
 ros2 launch gst_adapt_node A_B_comparison.launch.py video_path:=/path/to/4k.mp4
 
-<span class="text-slate-500"># Visual dashboard (second terminal)</span>
+<span class="text-slate-600"># Visual dashboard (second terminal)</span>
 ros2 run gst_adapt_node visualize_demo.py</pre>
     </div>
   </section>
 
   <!-- Platforms -->
-  <section class="max-w-4xl mx-auto px-6 py-20">
-    <h2 class="text-4xl font-bold text-center mb-12">Supported Platforms</h2>
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="bg-slate-800/40 rounded-2xl p-6 border border-slate-700/50 text-center hover:border-green-500/30 transition">
-        <div class="text-3xl mb-3">NVIDIA Jetson</div>
-        <div class="text-slate-500 text-sm">TX2 / Xavier / Orin</div>
-        <code class="text-xs text-green-400 mt-3 block font-bold">nvvideoconvert (CUDA + NVMM)</code>
+  <section class="max-w-5xl mx-auto px-6 py-24">
+    <h2 class="text-4xl font-black text-center mb-14">Supported Platforms</h2>
+    <div class="grid md:grid-cols-3 gap-7">
+      <div class="bg-[#111827] rounded-2xl p-7 border border-white/5 text-center card-hover">
+        <div class="text-3xl font-bold mb-2">NVIDIA Jetson</div>
+        <div class="text-slate-500 text-sm mb-3">TX2 / Xavier / Orin</div>
+        <code class="text-xs text-emerald-400 font-bold">nvvideoconvert (CUDA + NVMM)</code>
       </div>
-      <div class="bg-slate-800/40 rounded-2xl p-6 border border-slate-700/50 text-center hover:border-blue-500/30 transition">
-        <div class="text-3xl mb-3">Intel</div>
-        <div class="text-slate-500 text-sm">Gen9+ iGPU / Arc dGPU</div>
-        <code class="text-xs text-blue-400 mt-3 block font-bold">vaapipostproc (VASurface)</code>
+      <div class="bg-[#111827] rounded-2xl p-7 border border-white/5 text-center card-hover">
+        <div class="text-3xl font-bold mb-2">Intel</div>
+        <div class="text-slate-500 text-sm mb-3">Gen9+ iGPU / Arc dGPU</div>
+        <code class="text-xs text-blue-400 font-bold">vaapipostproc (VASurface)</code>
       </div>
-      <div class="bg-slate-800/40 rounded-2xl p-6 border border-slate-700/50 text-center hover:border-slate-500/30 transition">
-        <div class="text-3xl mb-3">CPU</div>
-        <div class="text-slate-500 text-sm">Any x86_64 / aarch64</div>
-        <code class="text-xs text-slate-400 mt-3 block font-bold">videoscale + videoconvert</code>
+      <div class="bg-[#111827] rounded-2xl p-7 border border-white/5 text-center card-hover">
+        <div class="text-3xl font-bold mb-2">CPU</div>
+        <div class="text-slate-500 text-sm mb-3">Any x86_64 / aarch64</div>
+        <code class="text-xs text-slate-500 font-bold">videoscale + videoconvert</code>
       </div>
     </div>
   </section>
 
   <!-- Footer -->
-  <footer class="text-center py-14 text-slate-600 text-sm border-t border-slate-800/50">
-    <p class="mb-2">Apache-2.0 &middot; Built for ROS 2 Humble</p>
-    <a href="https://github.com/sohams25/GstAdaptNode" class="text-cyan-600 hover:text-cyan-400 transition font-medium">
-      github.com/sohams25/GstAdaptNode
-    </a>
+  <footer class="text-center py-16 border-t border-white/5">
+    <p class="text-slate-600 text-sm mb-3">Apache-2.0 &middot; ROS 2 Humble &middot; C++17</p>
+    <a href="https://github.com/sohams25/GstAdaptNode" class="text-cyan-600 hover:text-cyan-400 transition text-sm font-medium">github.com/sohams25/GstAdaptNode</a>
   </footer>
 
+  <!-- Toggle JS -->
+  <script>
+    function showCode(which) {
+      const std = document.getElementById('code-standard');
+      const gst = document.getElementById('code-gst');
+      const btnStd = document.getElementById('btn-standard');
+      const btnGst = document.getElementById('btn-gst');
+      if (which === 'standard') {
+        std.classList.remove('hidden');
+        gst.classList.add('hidden');
+        btnStd.className = 'px-6 py-2.5 rounded-lg text-sm font-bold transition-all toggle-active text-white';
+        btnGst.className = 'px-6 py-2.5 rounded-lg text-sm font-bold transition-all toggle-inactive text-slate-400';
+      } else {
+        gst.classList.remove('hidden');
+        std.classList.add('hidden');
+        btnGst.className = 'px-6 py-2.5 rounded-lg text-sm font-bold transition-all toggle-active text-white';
+        btnStd.className = 'px-6 py-2.5 rounded-lg text-sm font-bold transition-all toggle-inactive text-slate-400';
+      }
+    }
+  </script>
 </body>
 </html>

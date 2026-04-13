@@ -1,5 +1,10 @@
 # GstAdaptNode
 
+[![ROS 2 Humble](https://img.shields.io/badge/ROS_2-Humble-green.svg)](https://docs.ros.org/en/humble/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![GStreamer](https://img.shields.io/badge/GStreamer-1.x-orange.svg)](https://gstreamer.freedesktop.org/)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
+
 > **[View the Project Website & Interactive Benchmarks](https://sohams25.github.io/GstAdaptNode/)**
 
 Hardware-agnostic ROS 2 perception acceleration. Auto-detects host accelerators (Intel VA-API / NVIDIA NVMM) at runtime to dynamically construct zero-copy GStreamer pipelines directly from standard ROS parameters.
@@ -66,6 +71,12 @@ Measured on an Intel desktop (VA-API), 4K (3840x2160) BGR8 source resized to 640
 | **Input Format** | bgr8 | bgr8 | Full compatibility |
 
 The accelerated path frees 1.25 CPU cores per camera stream for SLAM, perception, and planning — while accepting the exact same `bgr8` frames as `image_proc`.
+
+<p align="center">
+  <img src="docs/assets/cpu_chart.svg" width="420" alt="CPU Utilization: Legacy 152% vs Accelerated 27%">
+  &nbsp;&nbsp;
+  <img src="docs/assets/latency_chart.svg" width="420" alt="Latency: Legacy 45ms vs Accelerated 15ms">
+</p>
 
 ## How It Works
 
