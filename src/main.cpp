@@ -9,7 +9,7 @@ int main(int argc, char ** argv)
   rclcpp::NodeOptions options;
   options.use_intra_process_comms(true);
 
-  auto node = std::make_shared<gst_adapt_node::GstAdaptNode>(options);
+  auto node = std::make_shared<gst_adapt_node::ResizeNode>(options);
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;

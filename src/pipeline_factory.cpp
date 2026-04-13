@@ -74,7 +74,7 @@ std::string PipelineFactory::source_element() const
 
 std::string PipelineFactory::sink_element() const
 {
-  return "rosimagesink ros-topic=" + config_.output_topic;
+  return "rosimagesink ros-topic=" + config_.output_topic + " sync=false max-buffers=1 drop=true";
 }
 
 // ---------------------------------------------------------------------------

@@ -69,7 +69,7 @@ ament_target_dependencies(gst_adapt_node_component
 )
 
 rclcpp_components_register_nodes(gst_adapt_node_component
-  "gst_adapt_node::GstAdaptNode"
+  "gst_adapt_node::ResizeNode"
 )
 
 # ---------------------------------------------------------------------------

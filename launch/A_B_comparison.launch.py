@@ -9,7 +9,7 @@ ROS Graph:
   |   /legacy/image_raw      ----+--+      |   /accelerated/image_raw ----+--+
   |   /legacy/camera_info         |  |     |   /accelerated/camera_info   |  |
   +-------------------------------+  |     +-------------------------------+  |
-  | image_proc::ResizeNode        |  |     | gst_adapt_node::GstAdaptNode |  |
+  | image_proc::ResizeNode        |  |     | gst_adapt_node::ResizeNode   |  |
   |   <- /legacy/image_raw   <---+  |     |   <- /accelerated/image_raw<-+  |
   |   -> /legacy/image_processed -+--+-->  |   -> /accel/image_processed -+--+-->
   +-------------------------------+  |     +-------------------------------+  |
@@ -106,7 +106,7 @@ def generate_launch_description():
             ),
             ComposableNode(
                 package='gst_adapt_node',
-                plugin='gst_adapt_node::GstAdaptNode',
+                plugin='gst_adapt_node::ResizeNode',
                 name='accel_resize',
                 parameters=[{
                     'input_topic': '/accelerated/image_raw',
@@ -114,8 +114,9 @@ def generate_launch_description():
                     'action': 'resize',
                     'source_width': 3840,
                     'source_height': 2160,
-                    'target_width': 640,
-                    'target_height': 480,
+                    'use_scale': False,
+                    'height': 480,
+                    'width': 640,
                 }],
                 extra_arguments=[{'use_intra_process_comms': True}],
             ),

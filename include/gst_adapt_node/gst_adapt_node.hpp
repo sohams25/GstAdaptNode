@@ -11,11 +11,11 @@
 namespace gst_adapt_node
 {
 
-class GstAdaptNode : public rclcpp::Node
+class ResizeNode : public rclcpp::Node
 {
 public:
-  explicit GstAdaptNode(const rclcpp::NodeOptions & options);
-  ~GstAdaptNode() override;
+  explicit ResizeNode(const rclcpp::NodeOptions & options);
+  ~ResizeNode() override;
 
 private:
   PlatformInfo platform_info_;

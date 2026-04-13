@@ -18,8 +18,8 @@ def generate_launch_description():
         composable_node_descriptions=[
             ComposableNode(
                 package='gst_adapt_node',
-                plugin='gst_adapt_node::GstAdaptNode',
-                name='gst_adapt_node',
+                plugin='gst_adapt_node::ResizeNode',
+                name='resize_node',
                 parameters=[params_file],
                 extra_arguments=[{'use_intra_process_comms': True}],
             ),

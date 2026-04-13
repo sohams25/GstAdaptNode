@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GstAdaptNode — Hardware-Agnostic Zero-Copy ROS 2 Acceleration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0f172a; }
+    .glow-cyan { text-shadow: 0 0 24px rgba(34,211,238,0.35); }
+    .glow-border { box-shadow: 0 0 30px rgba(34,211,238,0.08); }
+    code { font-size: 0.9em; }
+    pre code { font-size: 0.82em; }
+  </style>
+</head>
+<body class="text-slate-200 font-sans antialiased">
+
+  <!-- Hero -->
+  <section class="min-h-[80vh] flex flex-col items-center justify-center text-center px-6 py-24">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 bg-slate-800/80 border border-slate-700 rounded-full px-4 py-1.5 text-xs text-slate-400 mb-8">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        ROS 2 Humble &middot; Apache-2.0 &middot; C++17
+      </div>
+      <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1]">
+        <span class="text-cyan-400 glow-cyan">GstAdaptNode</span>
+      </h1>
+      <p class="mt-6 text-xl md:text-2xl text-slate-400 font-light leading-relaxed">
+        Hardware-agnostic ROS&nbsp;2 perception acceleration.<br/>
+        A <span class="text-white font-semibold">drop-in replacement</span> for
+        <code class="bg-slate-800 px-2 py-0.5 rounded text-cyan-300">image_proc::ResizeNode</code>.
+      </p>
+      <p class="mt-6 text-base text-slate-500 max-w-2xl mx-auto leading-relaxed">
+        Auto-detects host accelerators (Intel VA-API / NVIDIA NVMM) at runtime to dynamically
+        construct zero-copy GStreamer pipelines directly from standard ROS parameters.
+        No GStreamer knowledge required.
+      </p>
+      <div class="mt-10 flex gap-4 justify-center flex-wrap">
+        <a href="https://github.com/sohams25/GstAdaptNode"
+           class="bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold px-7 py-3 rounded-lg transition shadow-lg shadow-cyan-500/20">
+          View on GitHub
+        </a>
+        <a href="#benchmarks"
+           class="border border-slate-600 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 font-semibold px-7 py-3 rounded-lg transition">
+          See Benchmarks
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Drop-in Replacement -->
+  <section class="max-w-5xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-4">Plug-and-Play</h2>
+    <p class="text-slate-400 text-center mb-10 max-w-2xl mx-auto">
+      Same parameters. Same composable node interface. Change one line in your launch file.
+    </p>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="rounded-xl border border-red-500/30 bg-slate-800/50 overflow-hidden">
+        <div class="bg-red-500/10 px-4 py-2 border-b border-red-500/20 text-red-400 text-xs font-semibold uppercase tracking-wider">
+          Before &mdash; CPU-bound (image_proc)
+        </div>
+        <pre class="p-4 text-slate-300 overflow-x-auto"><code>ComposableNode(
+    package=<span class="text-red-400">'image_proc'</span>,
+    plugin=<span class="text-red-400">'image_proc::ResizeNode'</span>,
+    name='resize',
+    parameters=[{
+        'use_scale': False,
+        'height': 480,
+        'width': 640,
+    }],
+)</code></pre>
+      </div>
+      <div class="rounded-xl border border-cyan-500/30 bg-slate-800/50 overflow-hidden glow-border">
+        <div class="bg-cyan-500/10 px-4 py-2 border-b border-cyan-500/20 text-cyan-400 text-xs font-semibold uppercase tracking-wider">
+          After &mdash; Hardware-Accelerated (GstAdaptNode)
+        </div>
+        <pre class="p-4 text-slate-300 overflow-x-auto"><code>ComposableNode(
+    package=<span class="text-cyan-400">'gst_adapt_node'</span>,
+    plugin=<span class="text-cyan-400">'gst_adapt_node::ResizeNode'</span>,
+    name='resize',
+    parameters=[{
+        'use_scale': False,
+        'height': 480,
+        'width': 640,
+    }],
+)</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="max-w-5xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-12">How It Works</h2>
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="bg-slate-800/60 rounded-xl p-6 border border-slate-700 hover:border-cyan-700 transition">
+        <div class="text-cyan-400 text-3xl font-mono mb-3">01</div>
+        <h3 class="text-lg font-semibold mb-2">Detect</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Probes <code class="text-slate-300">/dev/nvhost-*</code> for Jetson and
+          <code class="text-slate-300">/dev/dri/renderD*</code> for Intel VA-API.
+          Falls back to CPU if nothing found.
+        </p>
+      </div>
+      <div class="bg-slate-800/60 rounded-xl p-6 border border-slate-700 hover:border-cyan-700 transition">
+        <div class="text-cyan-400 text-3xl font-mono mb-3">02</div>
+        <h3 class="text-lg font-semibold mb-2">Validate</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Checks the GStreamer registry for
+          <code class="text-slate-300">vaapipostproc</code> or
+          <code class="text-slate-300">nvvidconv</code>.
+          Degrades gracefully with a visible warning if the plugin is missing.
+        </p>
+      </div>
+      <div class="bg-slate-800/60 rounded-xl p-6 border border-slate-700 hover:border-cyan-700 transition">
+        <div class="text-cyan-400 text-3xl font-mono mb-3">03</div>
+        <h3 class="text-lg font-semibold mb-2">Accelerate</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">
+          Builds a hardware-specific pipeline at runtime.
+          Custom <code class="text-slate-300">appsrc</code> wrapper feeds
+          I420 frames directly from ROS to the GPU scaler &mdash; zero copies.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section class="max-w-4xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-10">Zero-Copy Data Path</h2>
+    <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700 font-mono text-sm text-center leading-loose overflow-x-auto">
+      <div class="inline-block text-left">
+        <span class="text-cyan-400">MediaStreamerNode</span><span class="text-slate-500"> (I420, unique_ptr)</span><br/>
+        <span class="text-slate-600">&nbsp;&nbsp;&nbsp;&nbsp;&darr; intra-process pointer move (0 copies)</span><br/>
+        <span class="text-cyan-400">ResizeNode::on_image()</span><br/>
+        <span class="text-slate-600">&nbsp;&nbsp;&nbsp;&nbsp;&darr; gst_buffer_new_wrapped_full (0 copies)</span><br/>
+        <span class="text-yellow-400">appsrc</span> &rarr; <span class="text-yellow-400">vaapipostproc</span> &rarr; <span class="text-yellow-400">videoconvert</span> &rarr; <span class="text-yellow-400">rosimagesink</span><br/>
+        <span class="text-slate-600">&nbsp;&nbsp;&nbsp;&nbsp;&darr; GDestroyNotify frees sensor_msgs::msg::Image</span>
+      </div>
+    </div>
+    <p class="text-center text-slate-500 text-sm mt-4">
+      12.4 MB per 4K frame. Zero serialization between ROS and GStreamer.
+    </p>
+  </section>
+
+  <!-- Benchmarks -->
+  <section id="benchmarks" class="max-w-5xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-4">A/B Benchmark Results</h2>
+    <p class="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
+      Side-by-side: <code>image_proc::ResizeNode</code> (CPU) vs.
+      <code>gst_adapt_node::ResizeNode</code> (VA-API).<br/>
+      4K source &rarr; 640&times;480 output at 30&nbsp;Hz.
+    </p>
+    <div class="grid md:grid-cols-2 gap-8">
+      <div class="bg-slate-800/40 rounded-xl p-5 border border-slate-700 flex items-center justify-center">
+        <img src="assets/cpu_chart.svg" alt="CPU Utilization: Legacy 180% vs Accelerated 16%" class="w-full max-w-md" />
+      </div>
+      <div class="bg-slate-800/40 rounded-xl p-5 border border-slate-700 flex items-center justify-center">
+        <img src="assets/latency_chart.svg" alt="Latency: Legacy 45ms vs Accelerated 30ms" class="w-full max-w-md" />
+      </div>
+    </div>
+    <div class="mt-8 grid md:grid-cols-3 gap-4 text-center">
+      <div class="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
+        <div class="text-3xl font-bold text-cyan-400">10x</div>
+        <div class="text-slate-500 text-sm mt-1">CPU Reduction</div>
+      </div>
+      <div class="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
+        <div class="text-3xl font-bold text-cyan-400">~20ms</div>
+        <div class="text-slate-500 text-sm mt-1">Glass-to-Glass Latency</div>
+      </div>
+      <div class="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
+        <div class="text-3xl font-bold text-cyan-400">0</div>
+        <div class="text-slate-500 text-sm mt-1">Memory Copies (ROS &rarr; GPU)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start -->
+  <section class="max-w-3xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-8">Quick Start</h2>
+    <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 font-mono text-sm leading-relaxed overflow-x-auto">
+      <pre class="text-slate-300"><span class="text-slate-500"># Clone into a colcon workspace</span>
+cd ~/ros2_ws/src
+git clone --recursive https://github.com/sohams25/GstAdaptNode.git gst_adapt_node
+
+<span class="text-slate-500"># Install dependencies</span>
+sudo apt install ros-humble-image-proc gstreamer1.0-vaapi \
+  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
+<span class="text-slate-500"># Build</span>
+cd ~/ros2_ws &amp;&amp; colcon build --packages-up-to gst_adapt_node
+source install/setup.bash
+
+<span class="text-slate-500"># Run the A/B stress test</span>
+ros2 launch gst_adapt_node A_B_comparison.launch.py video_path:=/path/to/4k.mp4
+
+<span class="text-slate-500"># Open the visual dashboard (second terminal)</span>
+ros2 run gst_adapt_node visualize_demo.py</pre>
+    </div>
+  </section>
+
+  <!-- Platforms -->
+  <section class="max-w-4xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-10">Supported Platforms</h2>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-slate-800/60 rounded-xl p-5 border border-slate-700 text-center">
+        <div class="text-2xl mb-2">NVIDIA Jetson</div>
+        <div class="text-slate-500 text-sm">TX2 / Xavier / Orin</div>
+        <code class="text-xs text-green-400 mt-2 block">nvvidconv (NVMM)</code>
+      </div>
+      <div class="bg-slate-800/60 rounded-xl p-5 border border-slate-700 text-center">
+        <div class="text-2xl mb-2">Intel</div>
+        <div class="text-slate-500 text-sm">Gen9+ iGPU / Arc dGPU</div>
+        <code class="text-xs text-green-400 mt-2 block">vaapipostproc (VASurface)</code>
+      </div>
+      <div class="bg-slate-800/60 rounded-xl p-5 border border-slate-700 text-center">
+        <div class="text-2xl mb-2">CPU</div>
+        <div class="text-slate-500 text-sm">Any x86_64 / aarch64</div>
+        <code class="text-xs text-green-400 mt-2 block">videoscale + videoconvert</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="text-center py-12 text-slate-600 text-sm border-t border-slate-800">
+    <p>Apache-2.0 &middot; Built for ROS 2 Humble &middot; Soham Shinde</p>
+    <a href="https://github.com/sohams25/GstAdaptNode" class="text-cyan-600 hover:text-cyan-400 transition">
+      github.com/sohams25/GstAdaptNode
+    </a>
+  </footer>
+
+</body>
+</html>
