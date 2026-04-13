@@ -1,0 +1,7 @@
+gst_adapt_node:
+  ros__parameters:
+    input_topic: /camera/image_raw
+    output_topic: /camera/image_processed
+    action: resize
+    target_width: 640
+    target_height: 480
