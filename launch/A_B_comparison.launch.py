@@ -1,27 +1,6 @@
 """
-A/B Stress Test: Legacy CPU resize vs. Hardware-Accelerated GStreamer resize.
-Both pipelines use zero-copy intra-process media sources.
-
-ROS Graph:
-  legacy_container (intra-process)         accel_container (intra-process)
-  +-------------------------------+        +-------------------------------+
-  | MediaStreamerNode              |        | MediaStreamerNode              |
-  |   /legacy/image_raw      ----+--+      |   /accelerated/image_raw ----+--+
-  |   /legacy/camera_info         |  |     |   /accelerated/camera_info   |  |
-  +-------------------------------+  |     +-------------------------------+  |
-  | image_proc::ResizeNode        |  |     | gst_adapt_node::ResizeNode   |  |
-  |   <- /legacy/image_raw   <---+  |     |   <- /accelerated/image_raw<-+  |
-  |   -> /legacy/image_processed -+--+-->  |   -> /accel/image_processed -+--+-->
-  +-------------------------------+  |     +-------------------------------+  |
-                                     v                                        v
-                   +------------------------------------------+
-                   |         latency_tracker (Python)         |
-                   |   /legacy/image_processed                |
-                   |   /accelerated/image_processed           |
-                   +------------------------------------------+
-                   |         cpu_monitor (Python)              |
-                   |   Tracks CPU% per container process       |
-                   +------------------------------------------+
+A/B Stress Test: Two separate containers for independent CPU measurement.
+Each has its own MediaStreamerNode (10 fps cap to prevent PC overload).
 """
 
 from launch import LaunchDescription
@@ -34,16 +13,10 @@ from launch_ros.descriptions import ComposableNode
 def generate_launch_description():
 
     video_path_arg = DeclareLaunchArgument(
-        'video_path',
-        default_value='/tmp/test_video.mp4',
-        description='Path to input video file (set empty to use synthetic 4K)')
+        'video_path', default_value='/tmp/test_video.mp4')
 
     video_path = LaunchConfiguration('video_path')
 
-    # -----------------------------------------------------------------------
-    # PIPELINE A — Legacy CPU resize (image_proc::ResizeNode)
-    #   Requires: sudo apt install ros-humble-image-proc
-    # -----------------------------------------------------------------------
     legacy_container = ComposableNodeContainer(
         name='legacy_container',
         namespace='',
@@ -58,6 +31,7 @@ def generate_launch_description():
                     'video_path': video_path,
                     'image_topic': '/legacy/image_raw',
                     'info_topic': '/legacy/camera_info',
+                    'max_fps': 10.0,
                 }],
                 extra_arguments=[{'use_intra_process_comms': True}],
             ),
@@ -75,7 +49,7 @@ def generate_launch_description():
                     'use_scale': False,
                     'height': 480,
                     'width': 640,
-                    'interpolation': 1,  # cv::INTER_LINEAR
+                    'interpolation': 1,
                 }],
             ),
         ],
@@ -83,9 +57,6 @@ def generate_launch_description():
         emulate_tty=True,
     )
 
-    # -----------------------------------------------------------------------
-    # PIPELINE B — Hardware-accelerated resize (gst_adapt_node)
-    # -----------------------------------------------------------------------
     accel_container = ComposableNodeContainer(
         name='accel_container',
         namespace='',
@@ -100,6 +71,7 @@ def generate_launch_description():
                     'video_path': video_path,
                     'image_topic': '/accelerated/image_raw',
                     'info_topic': '/accelerated/camera_info',
+                    'max_fps': 10.0,
                 }],
                 extra_arguments=[{'use_intra_process_comms': True}],
             ),
@@ -124,21 +96,10 @@ def generate_launch_description():
         emulate_tty=True,
     )
 
-    # -----------------------------------------------------------------------
-    # TELEMETRY
-    # -----------------------------------------------------------------------
     latency = Node(
         package='gst_adapt_node',
         executable='latency_tracker.py',
         name='latency_tracker',
-        output='screen',
-        emulate_tty=True,
-    )
-
-    cpu = Node(
-        package='gst_adapt_node',
-        executable='cpu_monitor.py',
-        name='cpu_monitor',
         output='screen',
         emulate_tty=True,
     )
@@ -148,5 +109,4 @@ def generate_launch_description():
         legacy_container,
         accel_container,
         latency,
-        cpu,
     ])

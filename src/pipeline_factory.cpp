@@ -19,6 +19,11 @@ PlatformInfo validate_platform(
   const char * required_element = nullptr;
   switch (detected.platform) {
     case HardwarePlatform::INTEL_VAAPI:
+      // Try the newer va plugin first, fall back to legacy vaapi plugin
+      if (gst_element_factory_find("vapostproc")) {
+        RCLCPP_INFO(logger, "Plugin validated: 'vapostproc' found (GStreamer va plugin)");
+        return detected;
+      }
       required_element = "vaapipostproc";
       break;
     case HardwarePlatform::NVIDIA_JETSON:
@@ -56,7 +61,6 @@ PipelineFactory::PipelineFactory(
 
 // ---------------------------------------------------------------------------
 // Source — appsrc accepting native BGR from ROS Image messages.
-// No format conversion upstream — hardware bridges handle it.
 // ---------------------------------------------------------------------------
 
 std::string PipelineFactory::source_element() const
@@ -73,7 +77,7 @@ std::string PipelineFactory::source_element() const
 
 std::string PipelineFactory::sink_element() const
 {
-  return "appsink name=ros_emit sync=false max-buffers=1 drop=true";
+  return "appsink name=ros_emit caps=video/x-raw,format=(string)BGR sync=false max-buffers=1 drop=true";
 }
 
 // ---------------------------------------------------------------------------
@@ -96,23 +100,30 @@ std::string PipelineFactory::caps(const std::string & memory_type) const
 // Platform-specific resize chains — input is BGR from appsrc.
 // ---------------------------------------------------------------------------
 
-// Intel VA-API: videoconvert pins BGR→NV12 (planar, 12bpp — minimal CPU work),
-// vaapipostproc uploads + resizes on GPU, second vaapipostproc downloads,
-// videoconvert pins back to BGR for appsink.
-// NOTE: On GStreamer 1.22+ with vapostproc, the GL bridge
-// (glupload→glcolorconvert→vapostproc) would eliminate the CPU videoconvert.
 std::string PipelineFactory::resize_vaapi() const
 {
-  return "videoconvert ! video/x-raw,format=NV12"
-         " ! vaapipostproc"
-         " ! " + caps("VASurface") + ",format=NV12"
-         " ! vaapipostproc"
-         " ! videoconvert ! video/x-raw,format=BGR";
+  // GStreamer 1.22+ with va plugin: full GL bridge, zero CPU conversion
+  if (gst_element_factory_find("vapostproc")) {
+    return "glupload ! glcolorconvert"
+           " ! video/x-raw(memory:GLMemory),format=RGBA"
+           " ! vapostproc"
+           " ! video/x-raw(memory:VAMemory),format=NV12"
+           ",width=" + std::to_string(config_.target_width) +
+           ",height=" + std::to_string(config_.target_height) +
+           " ! vapostproc"
+           " ! video/x-raw(memory:VAMemory),format=BGRA"
+           " ! gldownload ! glcolorconvert"
+           " ! video/x-raw,format=BGR";
+  }
+
+  // GStreamer 1.20 with gstreamer-vaapi: vaapipostproc has a known chroma
+  // loss bug on many Intel iGPUs (UV plane is zeroed during download).
+  // Use CPU videoscale for correctness, still benefiting from the zero-copy
+  // appsrc/appsink architecture (no rosimagesrc/rosimagesink overhead).
+  return resize_cpu();
 }
 
-// NVIDIA Jetson: CUDA cores ingest BGR directly via compute-hw=1 override,
-// bypassing the VIC engine. First convert uploads to NVMM + converts to NV12.
-// Second convert resizes + downloads to system BGR.
+// NVIDIA Jetson: CUDA cores ingest BGR directly via compute-hw=1 override.
 std::string PipelineFactory::resize_jetson() const
 {
   std::ostringstream ss;

@@ -29,8 +29,11 @@ MediaStreamerNode::MediaStreamerNode(const rclcpp::NodeOptions & options)
 
   int w = static_cast<int>(cap_.get(cv::CAP_PROP_FRAME_WIDTH));
   int h = static_cast<int>(cap_.get(cv::CAP_PROP_FRAME_HEIGHT));
+  declare_parameter("max_fps", 10.0);
+  double max_fps = get_parameter("max_fps").as_double();
   fps_ = cap_.get(cv::CAP_PROP_FPS);
   if (fps_ <= 0) { fps_ = 30.0; }
+  if (fps_ > max_fps) { fps_ = max_fps; }
 
   auto image_topic = get_parameter("image_topic").as_string();
   auto info_topic = get_parameter("info_topic").as_string();

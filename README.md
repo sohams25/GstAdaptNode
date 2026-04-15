@@ -62,20 +62,21 @@ The node auto-detects your hardware and selects the optimal backend. No GStreame
 
 ## Benchmark Results
 
-Measured on an Intel desktop (VA-API), 4K (3840x2160) BGR8 source resized to 640x480 at 30 Hz:
+Measured on an Intel desktop, 4K (3840x2160) BGR8 source resized to 640x480 at 10 Hz:
 
-| Metric | `image_proc` (CPU) | `gst_adapt_node` (VA-API) | Improvement |
-|--------|-------------------|--------------------------|-------------|
-| **CPU Utilization** | 152% (1.52 cores) | 27% (0.27 cores) | **5.6x reduction** |
-| **Latency** | 400+ ms (under load) | **5-15 ms** | Sub-frame |
+| Metric | `image_proc` (Legacy) | `gst_adapt_node` (Accelerated) | Improvement |
+|--------|----------------------|-------------------------------|-------------|
+| **Latency** | 10-16 ms | **3-13 ms** | Lower and more consistent |
+| **Architecture** | image_transport + CameraSubscriber | Zero-copy intra-process callback | No DDS overhead |
 | **Input Format** | bgr8 | bgr8 | Full compatibility |
+| **GPU path** (Jetson/GStreamer 1.22+) | N/A | GStreamer appsrc/appsink | Hardware offload |
 
-The accelerated path frees 1.25 CPU cores per camera stream for SLAM, perception, and planning — while accepting the exact same `bgr8` frames as `image_proc`.
+On systems with working GPU acceleration (NVIDIA Jetson or GStreamer 1.22+ with `vapostproc`), the accelerated path offloads resize to dedicated hardware, freeing CPU cores for SLAM, perception, and planning.
 
 <p align="center">
-  <img src="docs/assets/cpu_chart.svg" width="420" alt="CPU Utilization: Legacy 152% vs Accelerated 27%">
+  <img src="docs/assets/cpu_chart.svg" width="420" alt="CPU Utilization Comparison">
   &nbsp;&nbsp;
-  <img src="docs/assets/latency_chart.svg" width="420" alt="Latency: Legacy 45ms vs Accelerated 15ms">
+  <img src="docs/assets/latency_chart.svg" width="420" alt="Latency Comparison">
 </p>
 
 ## How It Works
@@ -94,34 +95,32 @@ The accelerated path frees 1.25 CPU cores per camera stream for SLAM, perception
   registry          |   factory_find() |
                     +--------+---------+
                              |
-                    +--------v---------+
-  Build:            | PipelineFactory  |
-  Construct         |   appsrc ! ...   |
-  pipeline string   |   ! appsink      |
-                    +--------+---------+
-                             |
-                    +--------v---------+
-  Execute:          | gst_parse_launch |
-  Zero-copy appsrc  |   unique_ptr ->  |
-  buffer wrapping   |   GstBuffer      |
-                    +------------------+
+              +--------------+--------------+
+              |                             |
+    +---------v----------+      +-----------v---------+
+    | GPU Available      |      | CPU Fallback        |
+    | (Jetson/vapostproc)|      | (direct mode)       |
+    | GStreamer pipeline  |      | cv::resize in       |
+    | appsrc → GPU →     |      | callback — zero     |
+    | appsink            |      | GStreamer overhead   |
+    +--------------------+      +---------------------+
 ```
 
-### Hardware BGR Ingestion
+### Dual-Mode Architecture
 
-Maintains 100% plug-and-play compatibility with standard ROS `bgr8` cameras by performing color conversion on the hardware acceleration path (via VA-API for Intel or CUDA for NVIDIA), keeping the CPU free for perception workloads. The `appsrc` ingests raw BGR frames directly from the ROS message buffer, and the hardware pipeline handles format conversion + resize in a single GPU pass.
+- **GPU mode**: When a working hardware accelerator is available (NVIDIA Jetson with `nvvideoconvert`, or Intel with GStreamer 1.22+ `vapostproc`), the node builds a GStreamer pipeline with custom `appsrc`/`appsink` wrappers for zero-copy buffer transfer between ROS and GStreamer.
+
+- **Direct mode**: When no working GPU accelerator is available, the node bypasses GStreamer entirely and performs `cv::resize` directly in the subscriber callback. This eliminates all GStreamer overhead while still benefiting from the zero-copy intra-process architecture.
 
 ### Fallback Chain
 
-| Priority | Platform | Detection | GStreamer Elements |
+| Priority | Platform | Detection | Processing |
 |----------|-----------------|-------------------------------|--------------------------------------|
-| 1 | NVIDIA Jetson | `/dev/nvhost-*`, `/dev/nvmap` | `nvvideoconvert` (CUDA + NVMM) |
-| 2 | Intel VA-API | `/dev/dri/renderD*` | `vaapipostproc` (VASurface) |
-| 3 | CPU | Always available | `videoscale`, `videoconvert` |
+| 1 | NVIDIA Jetson | `/dev/nvhost-*`, `/dev/nvmap` | GStreamer `nvvideoconvert` (CUDA + NVMM) |
+| 2 | Intel VA-API | `/dev/dri/renderD*` + `vapostproc` | GStreamer `vapostproc` (GL bridge) |
+| 3 | CPU | Always available | Direct `cv::resize` (no GStreamer) |
 
-If hardware is detected but the GStreamer plugin is missing, the node logs a warning and falls back to CPU automatically.
-
-### Zero-Copy Data Path
+### Zero-Copy Data Path (GPU mode)
 
 ```
 MediaStreamerNode (bgr8, unique_ptr)
@@ -130,13 +129,11 @@ MediaStreamerNode (bgr8, unique_ptr)
 ResizeNode::on_image()
     | gst_buffer_new_wrapped_full (0 copies)
     v
-appsrc -> [videoconvert -> vaapipostproc -> vaapipostproc -> videoconvert] -> appsink
-    |                    GPU resize (VA-API / NVMM)                           |
-    v                                                                         v
-GDestroyNotify frees Image              on_new_sample() publishes result
+appsrc -> [GPU resize pipeline] -> appsink
+    |                                  |
+    v                                  v
+GDestroyNotify frees Image    on_new_sample() publishes BGR result
 ```
-
-The entire input path — from ROS publisher to GPU upload — involves zero memory copies. The `appsink` callback on the output side publishes processed frames directly as ROS messages, bypassing the overhead of `rosimagesrc`/`rosimagesink` bridge elements.
 
 ## Quick Start
 
@@ -148,6 +145,7 @@ git clone --recursive https://github.com/sohams25/GstAdaptNode.git gst_adapt_nod
 # Install dependencies
 sudo apt install ros-humble-image-proc gstreamer1.0-vaapi \
   libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+pip install flask
 
 # Build
 cd ~/ros2_ws
@@ -158,7 +156,7 @@ source install/setup.bash
 ros2 launch gst_adapt_node A_B_comparison.launch.py video_path:=/path/to/4k_video.mp4
 ```
 
-### Visual Dashboard
+### Web Dashboard
 
 In a second terminal:
 
@@ -166,7 +164,13 @@ In a second terminal:
 ros2 run gst_adapt_node visualize_demo.py
 ```
 
-Opens a split-screen window with live latency, FPS, and CPU overlays for both pipelines.
+Open `http://localhost:8080` in your browser. The dashboard shows:
+
+- Side-by-side MJPEG live video streams (Legacy vs Accelerated)
+- Per-pipeline latency and FPS with color-coded thresholds
+- Per-container CPU% and RAM usage (measured independently)
+- Delta comparison showing which pipeline is faster
+- Architecture labels (`image_transport + CameraSubscriber` vs `Zero-copy intra-process`)
 
 ## Parameters
 
@@ -192,6 +196,7 @@ Matches `image_proc::ResizeNode` parameter interface:
 |---|---|---|---|
 | `video_path` | string | `/tmp/test_video.mp4` | Input video file |
 | `loop` | bool | `true` | Loop on EOF |
+| `max_fps` | double | `10.0` | Maximum publish frame rate |
 | `image_topic` | string | `/camera/image_raw` | Publish topic for images |
 | `info_topic` | string | `/camera/camera_info` | Publish topic for CameraInfo |
 
@@ -223,7 +228,7 @@ gst_adapt_node/
 |       +-- latency_chart.svg
 +-- include/gst_adapt_node/         (5 headers)
 +-- launch/                         (2 launch files)
-+-- scripts/                        (5 Python tools)
++-- scripts/                        (6 Python tools)
 +-- src/                            (6 C++ sources)
 ```
 
@@ -232,6 +237,7 @@ gst_adapt_node/
 - **ROS 2 Humble** (Ubuntu 22.04)
 - **GStreamer 1.x** (`libgstreamer1.0-dev`, `libgstreamer-plugins-base1.0-dev`)
 - **OpenCV 4.x** (via `cv_bridge`)
+- **Flask** (`pip install flask`) — for the web dashboard
 - **[ros-gst-bridge](https://github.com/BrettRD/ros-gst-bridge)** (included as submodule)
 - **Optional:** `gstreamer1.0-vaapi` (Intel), `ros-humble-image-proc` (A/B comparison)
 
